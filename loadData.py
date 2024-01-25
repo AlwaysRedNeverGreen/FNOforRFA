@@ -1,6 +1,7 @@
 import scipy.io
 import numpy as np
 
+# Load the data from the file and return a dictionary of variables with the time steps as keys and the matrices as values
 def loadData(file_path):
 # Load the .mat file
     data = scipy.io.loadmat(file_path)
@@ -45,6 +46,7 @@ def loadData(file_path):
     
     return variables
             
+# Print the data
 def printData(variables):
     for key, matrix in variables.items():
         print(f"Data for {key}:")

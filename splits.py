@@ -1,5 +1,6 @@
 from torch.utils.data import DataLoader, Dataset
 import torch
+"""This class creates the train and test sets from the data"""
 
 class CustomDataset(Dataset):
     def __init__(self, inputs, outputs):
