@@ -1,7 +1,3 @@
-import loadData as ld
-import dataVisualization as dv
-import splits as sp
-
 from neuralop.models import FNO2d
 from neuralop import Trainer
 from neuralop.datasets import load_darcy_flow_small
@@ -9,6 +5,10 @@ from neuralop.utils import count_params
 from neuralop import LpLoss, H1Loss
 import torch
 
+import loadData as ld
+import dataVisualization as dv
+import splits as sp
+import modelEval as me
 file_path = 'Data/CASE01_DATA.mat'
 input_seq_len=10 # The length of the input sequence
 
@@ -46,7 +46,7 @@ eval_losses={'h1': h1loss, 'l2': l2loss} # The losses we want to evaluate
 output_encoder = None # No encoder for the output
 
 # Create the trainer
-trainer = Trainer(model, n_epochs=30,
+trainer = Trainer(model, n_epochs=10,
                   device="cpu",
                   mg_patching_levels=0,
                   wandb_log=False,
@@ -67,20 +67,4 @@ trainer.train(train_loader, test_loader,
  # The length of the input sequence
 
 model.eval()  # Set the model to evaluation mode
-
-"""This block is for visualizing the predictions of the model for evaluation purposes"""
-with torch.no_grad(): 
-    for batch_idx, batch in enumerate(test_loader):
-        x_test, y_true = batch['x'], batch['y']
-        y_pred = model(x_test)  # Get model's predictions
-        print("shape is",y_pred.shape)
-        # Calculate the index for the predicted timestep
-        for i in range(y_pred.size(1)):  # Assuming y_pred is of shape (batch_size, timesteps, height, width)
-            # Calculate the timestep being shown
-            timestep_idx = (batch_idx * test_loader.batch_size + i) * 5 + (input_seq_len - 1) * 5
-            predicted_timestep = f"T{timestep_idx + 5:03d}"  # The predicted timestep
-
-            # Get the prediction for the current timestep
-            y_pred_timestep = y_pred[0, i].cpu().numpy()  # Convert to numpy array
-            # Plot the heatmap
-            dv.plot_heatmap(y_pred_timestep, predicted_timestep, title="Predicted Temperature Distribution")
+me.eval(model,test_loader,input_seq_len)
