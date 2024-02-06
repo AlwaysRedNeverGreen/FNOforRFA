@@ -1,6 +1,6 @@
 from neuralop.models import FNO2d
 from neuralop import Trainer
-#from neuralop.utils import count_params
+from neuralop.utils import count_params
 from neuralop import LpLoss, H1Loss
 import torch
 import wandb
@@ -13,7 +13,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 def training(train_loader, test_loader):
     test_loaders = {"default": test_loader}
     model = FNO2d(n_modes_width = 16, n_modes_height = 16, hidden_channels=32, projection_channels=64 , in_channels=5, out_channels=1) #Create the model
-    #n_params = count_params(model) #Count the number of parameters in the model
+    n_params = count_params(model) #Count the number of parameters in the model
 
     optimizer = torch.optim.Adam(model.parameters(), lr=8e-3, weight_decay=1e-4) #Create the optimizer
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30) #Create the scheduler
@@ -36,11 +36,12 @@ def training(train_loader, test_loader):
                   use_distributed=False,
                   verbose=True)
 
-    trainer.train(train_loader,
-              test_loaders,
-              optimizer=optimizer,
-              scheduler=scheduler,
-              regularizer=False,
+    trainer.train(train_loader, test_loader,
+              output_encoder,
+              model, 
+              optimizer,
+              scheduler, 
+              regularizer=False, 
               training_loss=train_loss,
               eval_losses=eval_losses)
 

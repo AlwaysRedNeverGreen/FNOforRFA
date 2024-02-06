@@ -58,7 +58,7 @@ def create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch
     test_dataset = CustomDataset(x_test, y_test)
 
     # Create DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
