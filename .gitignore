@@ -2,3 +2,7 @@
 /Videos
 /__pycache__
 /tempCodeRunnerFile.py
+/.venv
+/wandb
+/oldmain.py
+trained_model1.pth

@@ -1,3 +1,19 @@
+"""
+This module provides functionality for loading and preprocessing temperature distribution data stored in .mat files. 
+It contains functions to: load the data into a Python dictionary, process the data by reshaping and rotating matrices to a standard format, and print the processed data for verification and analysis.
+
+Key Features:
+- loadData(file_path): Loads temperature distribution data from a specified .mat file, preprocesses it by ensuring all matrices are of uniform shape, and returns a dictionary with time steps as keys and the corresponding matrices as values.
+- printData(variables): Prints the loaded and processed temperature distribution data for each time step, aiding in data verification and analysis.
+
+Dependencies:
+- scipy.io: Used for loading .mat files containing the temperature distribution data.
+- numpy: Utilized for numerical operations such as resizing and rotating matrices to ensure uniformity across all time steps.
+
+Usage:
+- This module is intended to be used in data preparation steps of temperature distribution analysis, where data from .mat files needs to be loaded, standardized, and made ready for further processing or visualization.
+"""
+
 import scipy.io
 import numpy as np
 

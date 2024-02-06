@@ -1,6 +1,22 @@
+"""
+This module provides functionalities for converting sequential data into PyTorch datasets suitable for machine learning models, particularly for training and testing purposes. It includes the definition of a custom Dataset class to handle input-output pairs and a function to prepare and split the data into training and testing sets according to specified criteria.
+
+Classes:
+- CustomDataset: A subclass of torch.utils.data.Dataset that stores the input and output sequences for model training and evaluation. It overrides the __len__ and __getitem__ methods to allow iteration over the dataset.
+
+Functions:
+- create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch_size): Processes the raw data from a dictionary of variables into structured input-output pairs, splits them into training and testing sets based on a specified ratio, and wraps them in DataLoader instances for batch processing during model training and evaluation.
+
+Dependencies:
+- torch: The main library used for creating tensor objects from the raw data and for defining the dataset and dataloader functionalities.
+- DataLoader, Dataset from torch.utils.data: Utilized for batching and iterating over the datasets during model training and evaluation.
+
+Usage:
+This module is intended to be used in scenarios where sequential data (e.g., time series) needs to be fed into a neural network model, facilitating the process of preparing the data for model training and evaluation.
+"""
+
 from torch.utils.data import DataLoader, Dataset
 import torch
-"""This class creates the train and test sets from the data"""
 
 class CustomDataset(Dataset):
     def __init__(self, inputs, outputs):
