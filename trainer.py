@@ -8,12 +8,12 @@ import loadData as ld
 import dataVisualization as dv
 import splits as sp
 
-epochs = 5 # The number of epochs to train the model
-device = "cuda" if torch.cuda.is_available() else "cpu"
-def training(train_loader, test_loader):
-    test_loaders = {"default": test_loader}
-    model = FNO2d(n_modes_width = 16, n_modes_height = 16, hidden_channels=32, projection_channels=64 , in_channels=5, out_channels=1) #Create the model
-    n_params = count_params(model) #Count the number of parameters in the model
+
+
+def training(train_loader, test_loader,input_seq_len,epochs,model_path):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    #test_loaders = {"default": test_loader}
+    model = FNO2d(n_modes_width = 32, n_modes_height = 32, hidden_channels=32, projection_channels=64 , in_channels=input_seq_len, out_channels=1) #Create the model
 
     optimizer = torch.optim.Adam(model.parameters(), lr=8e-3, weight_decay=1e-4) #Create the optimizer
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30) #Create the scheduler
@@ -46,4 +46,4 @@ def training(train_loader, test_loader):
               eval_losses=eval_losses)
 
     # Save the entire model (including architecture and trained parameters)
-    torch.save(model, 'trained_model1.pth')
+    torch.save(model, model_path)

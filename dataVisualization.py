@@ -7,7 +7,7 @@ Functions:
 - animate(i, variables, min_temp, max_temp, time_steps): Helper function to generate frames for the animation, showing temperature distribution at each timestep.
 - createAnimation(variables, case): Produces an animated visualization of temperature distributions over time, saved as a video file.
 - plot_heatmap(matrix, timestep, title, vmin, vmax): Plots a single heatmap for a given temperature matrix at a specific timestep, with customizable color scaling.
-
+- plot_comparison_heatmaps plots heatmaps of ground truth and predicted temperature distributions for comparison at a specific timestep.
 Dependencies:
 - matplotlib: Used for creating static and animated visualizations.
 - numpy: Utilized for numerical operations, particularly finding the min and max values for temperature scaling.
@@ -47,4 +47,21 @@ def plot_heatmap(matrix, timestep, title="Heatmap", vmin=0, vmax=100):
     plt.imshow(matrix, cmap='plasma', interpolation='nearest', vmin=vmin, vmax=vmax)
     plt.title(f"{title} - {timestep}")
     plt.colorbar()
+    plt.show()
+
+def plot_comparison_heatmaps(y_true, y_pred, timestep, title_true="Ground Truth", title_pred="Prediction", vmin=0, vmax=100):
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+    fig.suptitle(f"Temperature Distribution at {timestep}")
+
+    # Plot Ground Truth
+    im_true = axs[0].imshow(y_true, cmap='plasma', interpolation='nearest', vmin=vmin, vmax=vmax)
+    axs[0].set_title(title_true)
+    fig.colorbar(im_true, ax=axs[0], fraction=0.046, pad=0.04)
+
+    # Plot Prediction
+    im_pred = axs[1].imshow(y_pred, cmap='plasma', interpolation='nearest', vmin=vmin, vmax=vmax)
+    axs[1].set_title(title_pred)
+    fig.colorbar(im_pred, ax=axs[1], fraction=0.046, pad=0.04)
+
+    plt.tight_layout()
     plt.show()
