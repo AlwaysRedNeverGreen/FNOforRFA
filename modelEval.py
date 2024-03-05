@@ -19,17 +19,26 @@ def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction
     error_list = [] # List to store the error for each prediction
     results_dict = {} # Dictionary to store the results for each timestep
     exit_counter = 0 
-    
+    skip_counter = 0
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_loader):
                 x_test, y_true = batch['x'], batch['y']  # Extract input and output sequences from the batch
                 
-                if batch_idx == 0 or exit_counter == prediction_len-1:
+                if batch_idx == 0: 
                     y_pred = loaded_model(x_test)  # Apply the model to the test input
-                    
-                    if batch_idx != 0 and exit_counter == prediction_len:
-                        y_pred = loaded_model(x_test)
-                    exit_counter = 0
+                    print(f"Original input T{current_timestep}:\n {x_test}")
+                
+                elif exit_counter == prediction_len - 1:
+                     exit_counter = 0
+                     skip_counter = 1
+                     print("Skipping")
+                     continue
+                 
+                elif skip_counter == 1:
+                    print("Skipped")
+                    current_timestep += (5*input_seq_len)
+                    y_pred = loaded_model(x_test)
+                    skip_counter = 0
                     results_dict[f'Original input T{current_timestep}'] = x_test
                     print(f"Original input T{current_timestep}:\n {x_test}")
                     
@@ -63,8 +72,7 @@ def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction
     print(f"Mean of the error list: {sum(error_list) / len(error_list)}")
     #print(results_dict)
     #dv.createAnimation(results_dict, 'case03')  # Create an animation of the predictions over time
-
-    print(timesteps)
-    for i in range(len(predictions)):
-        print(f"Plotting comparison heatmap for timestep {timesteps[i]}")
+    
+    #for i in range(len(predictions)):
+        #print(f"Plotting comparison heatmap for timestep {timesteps[i]}")
         #dv.plot_comparison_heatmaps(ground_truths[i], predictions[i], timesteps[i])  # Visualize the comparison between the predicted and true temperature distributions
