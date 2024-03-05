@@ -15,6 +15,7 @@ Dependencies:
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
+import torch
  
 def findMinMax(variables):
     all_values = np.concatenate([v.ravel() for v in variables.values()])
@@ -28,14 +29,23 @@ def viewData(variables):
         plt.show()
         
 def animate(i, variables, min_temp, max_temp, time_steps):
+    
     plt.clf()
     key = f'T{time_steps[i]:03d}'
     if key in variables:
-        plt.imshow(variables[key], cmap='plasma', interpolation='nearest', vmin=0, vmax=max_temp)
-        plt.title(f"Temperature Distribution at {key}")
+        image_data = variables[key].squeeze()
+        plt.imshow(image_data, cmap='plasma', interpolation='nearest', vmin=0, vmax=max_temp)
+        if key[-1] == '5':
+            plt.title(f"Temperature Distribution at {key}")
+        else:
+            plt.title(f" Predicted Temperature Distribution at {key}")
         plt.colorbar()
 
 def createAnimation(variables, case):
+    for key in list(variables.keys()):  # Use list to avoid RuntimeError for changing dict size during iteration
+        if isinstance(variables[key], torch.Tensor):
+            #print("Converting tensors to numpy arrays for key:", key)
+            variables[key] = variables[key].cpu().detach().numpy()
     min_temp, max_temp = 0,100
     time_steps = sorted([int(k[1:]) for k in variables.keys() if k.startswith('T')])
     fig = plt.figure()

@@ -1,5 +1,6 @@
 /.DS_Store
 /Videos
+/Predicted Videos
 /__pycache__
 /tempCodeRunnerFile.py
 /.venv
@@ -7,7 +8,5 @@
 /oldmain.py
 /newMain.py
 /newSplit.py
-trained_model1.pth
-trained_model2.pth
-trained_model3.pth
 /viewData.py
+/Models

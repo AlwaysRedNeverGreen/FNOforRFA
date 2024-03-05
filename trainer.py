@@ -1,5 +1,5 @@
 from neuralop.models import FNO2d
-from neuralop import Trainer
+from trainer2 import Trainer
 from neuralop.utils import count_params
 from neuralop import LpLoss, H1Loss
 import torch
@@ -8,9 +8,13 @@ import loadData as ld
 import dataVisualization as dv
 import splits as sp
 
+def calculate_multichannel_loss(output, target, loss_fn):
+    # Assuming output and target are of shape [batch_size, channels, height, width]
+    per_channel_loss = [loss_fn(output[:, i], target[:, i]) for i in range(output.shape[1])]
+    total_loss = sum(per_channel_loss) / len(per_channel_loss)  # Averaging loss across channels
+    return total_loss
 
-
-def training(train_loader, test_loader,input_seq_len,epochs,model_path):
+def training(train_loader, test_loader,input_seq_len,epochs,model_path,prediction_length):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     #test_loaders = {"default": test_loader}
     model = FNO2d(n_modes_width = 32, n_modes_height = 32, hidden_channels=32, projection_channels=64 , in_channels=input_seq_len, out_channels=1) #Create the model
@@ -23,10 +27,10 @@ def training(train_loader, test_loader,input_seq_len,epochs,model_path):
 
     train_loss = h1loss # The loss we want to train
     eval_losses={'h1': h1loss, 'l2': l2loss} # The losses we want to evaluate
-
+    
     output_encoder = None # No encoder for the output
 
-    wandb.init(project='FNO for Dataset 1', config={'hyper': 'parameter_values'})
+    wandb.init(project='FNO for RFA', config={'hyper': 'parameter_values'})
 
     trainer = Trainer(model=model, n_epochs=epochs,
                   device=device,
@@ -36,14 +40,14 @@ def training(train_loader, test_loader,input_seq_len,epochs,model_path):
                   use_distributed=False,
                   verbose=True)
 
-    trainer.train(train_loader, test_loader,
+    trainer.training(train_loader, test_loader,
               output_encoder,
               model, 
               optimizer,
               scheduler, 
               regularizer=False, 
               training_loss=train_loss,
-              eval_losses=eval_losses)
+              eval_losses=eval_losses,prediction_length=prediction_length)
 
     # Save the entire model (including architecture and trained parameters)
     torch.save(model, model_path)
