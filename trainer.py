@@ -30,7 +30,7 @@ def training(train_loader, test_loader,input_seq_len,epochs,model_path,predictio
     
     output_encoder = None # No encoder for the output
 
-    wandb.init(project='FNO for RFA', config={'hyper': 'parameter_values'})
+    wandb.init(project='FNO 10 out', config={'hyper': 'parameter_values'})
 
     trainer = Trainer(model=model, n_epochs=epochs,
                   device=device,
@@ -46,8 +46,8 @@ def training(train_loader, test_loader,input_seq_len,epochs,model_path,predictio
               optimizer,
               scheduler, 
               regularizer=False, 
-              training_loss=train_loss,
+              training_loss=None,
               eval_losses=eval_losses,prediction_length=prediction_length)
 
-    # Save the entire model (including architecture and trained parameters)
+    #Save the entire model (including architecture and trained parameters)
     torch.save(model, model_path)
