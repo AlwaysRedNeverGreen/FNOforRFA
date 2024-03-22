@@ -20,31 +20,32 @@ def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction
     results_dict = {} # Dictionary to store the results for each timestep
     exit_counter = 0 
     skip_counter = 0
+    error_sub=[]
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_loader):
                 x_test, y_true = batch['x'], batch['y']  # Extract input and output sequences from the batch
                 
                 if batch_idx == 0: 
                     y_pred = loaded_model(x_test)  # Apply the model to the test input
-                    print(f"Original input T{current_timestep}:\n {x_test}")
+                    #print(f"Original input T{current_timestep}:\n {x_test}")
                 
                 elif exit_counter == prediction_len - 1:
                      exit_counter = 0
                      skip_counter = 1
-                     print("Skipping")
+                     #print("Skipping")
                      continue
                  
                 elif skip_counter == 1:
-                    print("Skipped")
+                    #print("Skipped")
                     current_timestep += (5*input_seq_len)
                     y_pred = loaded_model(x_test)
                     skip_counter = 0
                     results_dict[f'Original input T{current_timestep}'] = x_test
-                    print(f"Original input T{current_timestep}:\n {x_test}")
+                    #print(f"Original input T{current_timestep}:\n {x_test}")
                     
                 else:
-                    #results_dict[f'Predicted Input T{current_timestep}'] = y_pred
-                    print(f"Predicted Input T{current_timestep}:\n {y_pred}")
+                    results_dict[f'Predicted Input T{current_timestep}'] = y_pred
+                    #print(f"Predicted Input T{current_timestep}:\n {y_pred}")
                     y_pred = loaded_model(y_pred )                    
                     exit_counter = exit_counter + 1
             
@@ -56,11 +57,14 @@ def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction
                     y_pred_timestep = y_pred[0, i].cpu().numpy().squeeze() # Extract the predicted temperature distribution for the current timestep
                     results_dict[f'Prediction T{current_timestep}'] = y_pred
                     predictions.append(y_pred_timestep)
-                    print(f"Prediction at T{current_timestep}:\n {y_pred_timestep}")
+                    #print(f"Prediction at T{current_timestep}:\n {y_pred_timestep}")
                     
                     y_true_sample = y_true[0, i].cpu().numpy().squeeze() # Extract the ground truth temperature distribution for the current timestep
                     ground_truths.append(y_true_sample)
-                    print(f"Ground Truth at {current_timestep}:\n {y_true_sample}")
+                    #print(f"Ground Truth at {current_timestep}:\n {y_true_sample}")
+                    
+                    error_sub.append(y_true_sample-y_pred_timestep)
+                    #print(f"Error at {current_timestep}:\n {y_pred_timestep-y_true_sample}")
                     
                     errors = (y_true - y_pred) ** 2
                     mse = torch.mean(errors)
@@ -73,6 +77,6 @@ def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction
     #print(results_dict)
     #dv.createAnimation(results_dict, 'case03')  # Create an animation of the predictions over time
     
-    #for i in range(len(predictions)):
+    for i in range(len(predictions)):
         #print(f"Plotting comparison heatmap for timestep {timesteps[i]}")
-        #dv.plot_comparison_heatmaps(ground_truths[i], predictions[i], timesteps[i])  # Visualize the comparison between the predicted and true temperature distributions
+        dv.plot_comparison_heatmaps(ground_truths[i], predictions[i], timesteps[i])  # Visualize the comparison between the predicted and true temperature distributions
