@@ -223,7 +223,7 @@ class Trainer:
             is_logger = (comm.get_world_rank() == 0)
         else:
             is_logger = True 
-        ############################################################################################
+
         for epoch in range(self.n_epochs):
             t1 = default_timer()
             model.train()
@@ -246,7 +246,7 @@ class Trainer:
                         
                     output = model(x)
                     #print("This is the output: \n ", output)
-                    # Assuming output and y are structured such that you can directly compare them
+                    #Assuming output and y are structured such that you can directly compare them
                     loss += training_loss(output, y[:, t])
                     error = (output - y[:, t]) ** 2
                     mse = torch.mean(error)
@@ -263,10 +263,7 @@ class Trainer:
             avg_loss = total_loss / len(train_loader)
             avg_rmse = training_error / len(train_loader)
             print(f'Epoch [{epoch+1}/{self.n_epochs}]: Average Loss: {avg_loss}, Average RMSE: {avg_rmse}')
-            wandb.log({"epoch": epoch+1, "avg_loss": avg_loss})
-            wandb.log({"epoch": epoch+1, "avg_rmse": avg_rmse})
-            print
-            ############################################################################################
+            wandb.log({"avg_loss": avg_loss, "avg_rmse": avg_rmse}, step = epoch)
             
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 scheduler.step(train_err)
@@ -281,7 +278,7 @@ class Trainer:
             
             if epoch % self.log_test_interval == 0: 
                 
-                msg = f'[{epoch}] time={epoch_train_time:.2f}, avg_loss={avg_loss:.4f}, train_err={train_err:.4f}'
+                msg = f'[{epoch}] time={epoch_train_time:.2f}, avg_loss={avg_loss:.4f}'
 
                 values_to_log = dict(train_err=train_err, time=epoch_train_time, avg_loss=avg_loss)
 
