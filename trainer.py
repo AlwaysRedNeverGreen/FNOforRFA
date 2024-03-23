@@ -8,12 +8,6 @@ import loadData as ld
 import dataVisualization as dv
 import splits as sp
 
-def calculate_multichannel_loss(output, target, loss_fn):
-    # Assuming output and target are of shape [batch_size, channels, height, width]
-    per_channel_loss = [loss_fn(output[:, i], target[:, i]) for i in range(output.shape[1])]
-    total_loss = sum(per_channel_loss) / len(per_channel_loss)  # Averaging loss across channels
-    return total_loss
-
 def training(train_loader, test_loader,input_seq_len,epochs,model_path,prediction_length):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     #test_loaders = {"default": test_loader}
