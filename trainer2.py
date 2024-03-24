@@ -194,15 +194,13 @@ class Trainer:
                         values_to_log['lr'] = lr
                     wandb.log(values_to_log, step=epoch, commit=True)
                     
-    def training(self, train_loader, test_loaders, output_encoder,
-              model, optimizer, scheduler, regularizer, 
-              training_loss=None, eval_losses=None, prediction_length=1):
-
-        """Trains the given model on the given datasets"""
-        n_train = len(train_loader.dataset)
+    def training(self, train_loader, test_loaders, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1):
         
-        if not isinstance(test_loaders, dict):
-            test_loaders = dict(test=test_loaders)
+        n_train = len(train_loader.dataset)
+    
+        # If test_loaders is not a dictionary, convert it to a dictionary
+        if not isinstance(test_loaders, dict): 
+            test_loaders = dict(test=test_loaders) 
 
         if self.verbose:
             print(f'Training on {n_train} samples')
@@ -225,61 +223,53 @@ class Trainer:
             is_logger = True 
 
         for epoch in range(self.n_epochs):
-            t1 = default_timer()
+            t1 = default_timer() #Start the timer for the epoch
             model.train()
-            total_loss = 0
-            train_err = 0.0
-            training_error = 0.0
+            train_err = 0
+            degreeVariation = 0.0 #Sum of the RMSE for each time step
             for batch in train_loader:
                 optimizer.zero_grad()
                 x, y = batch['x'].to(self.device), batch['y'].to(self.device)
                 #print("This is ground truth Y:\n ", y)
-                loss = 0
-                error = 0
-                # Assuming x is the initial input and y contains the targets for subsequent time steps
+                loss = 0 
+                squarederror = 0
+
                 for t in range(prediction_length):
-                    #print("This is the t value: ", t)
-                    #if t % 2 == 0:
-                        #print("This is the input x: \n ",x)
-                    #else:
-                        #print("This is the predicted input\n ",x)
-                        
                     output = model(x)
                     #print("This is the output: \n ", output)
-                    #Assuming output and y are structured such that you can directly compare them
-                    loss += training_loss(output, y[:, t])
-                    error = (output - y[:, t]) ** 2
-                    mse = torch.mean(error)
-                    rmse = torch.sqrt(mse)
-                    #sum the error for each time step
-                    training_error += rmse.item()
+
+                    loss += training_loss(output, y[:, t]) 
+                    squarederror = (output - y[:, t]) ** 2 
+                    
+                    mse = torch.mean(squarederror) #mean squared error
+                    rmse = torch.sqrt(mse) #Calculate the RMSE for the time step, this is the squarederror in original units degrees celsius
+                    #sum the squarederror for each time step
+                    degreeVariation += rmse.item() #Add the RMSE to the total RMSE for the epoch
                 
                     #print("This is what the output is being compared to: \n ", y[:, t])
                     # Prepare x for the next prediction step
                     x = output
                 loss.backward()
                 optimizer.step()
-                total_loss += loss.item()
-            avg_loss = total_loss / len(train_loader)
-            avg_rmse = training_error / len(train_loader)
+                train_err += loss.item()
+                
+            avg_loss = train_err / len(train_loader) #average loss for the epoch
+            avg_rmse = degreeVariation / len(train_loader) #average RMSE for the epoch
             print(f'Epoch [{epoch+1}/{self.n_epochs}]: Average Loss: {avg_loss}, Average RMSE: {avg_rmse}')
             wandb.log({"avg_loss": avg_loss, "avg_rmse": avg_rmse}, step = epoch)
             
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                scheduler.step(train_err)
+                scheduler.step(train_err) #Reduce the learning rate if the loss is not decreasing
             else:
                 scheduler.step()
 
-            epoch_train_time = default_timer() - t1
-            del x, y
+            epoch_train_time = default_timer() - t1 
+            del x, y #Delete the x and y tensors to free up memory
 
-            train_err/= n_train
-            avg_loss /= self.n_epochs
+            avg_loss /= self.n_epochs 
             
             if epoch % self.log_test_interval == 0: 
-                
                 msg = f'[{epoch}] time={epoch_train_time:.2f}, avg_loss={avg_loss:.4f}'
-
                 values_to_log = dict(train_err=train_err, time=epoch_train_time, avg_loss=avg_loss)
 
                 for loader_name, loader in test_loaders.items():
@@ -288,11 +278,11 @@ class Trainer:
                     else:
                         to_log_output = False
 
-                    """errors = self.evaluate(model, eval_losses, loader, output_encoder, log_prefix=loader_name)
+                    errors = self.evaluate(model, eval_losses, loader, output_encoder, log_prefix=loader_name)
 
                     for loss_name, loss_value in errors.items():
                         msg += f', {loss_name}={loss_value:.4f}'
-                        values_to_log[loss_name] = loss_value"""
+                        values_to_log[loss_name] = loss_value
 
                 if regularizer:
                     avg_lasso_loss /= self.n_epochs
@@ -309,66 +299,35 @@ class Trainer:
                         values_to_log['lr'] = lr
                     wandb.log(values_to_log, step=epoch, commit=True)
 
-    def evaluate(self, model, loss_dict, data_loader, output_encoder=None,
-                 log_prefix=''):
-        """Evaluates the model on a dictionary of losses
-        
-        Parameters
-        ----------
-        model : model to evaluate
-        loss_dict : dict of functions 
-          each function takes as input a tuple (prediction, ground_truth)
-          and returns the corresponding loss
-        data_loader : data_loader to evaluate on
-        output_encoder : used to decode outputs if not None
-        log_prefix : str, default is ''
-            if not '', used as prefix in output dictionary
-
-        Returns
-        -------
-        errors : dict
-            dict[f'{log_prefix}_{loss_name}] = loss for loss in loss_dict
-        """
+    def evaluate(self, model, loss_dict, data_loader, output_encoder=None, log_prefix=''):
+        """Evaluate the model on a dictionary of losses."""
         model.eval()
-
-        if self.use_distributed:
-            is_logger = (comm.get_world_rank() == 0)
-        else:
-            is_logger = True 
-
-        errors = {f'{log_prefix}_{loss_name}':0 for loss_name in loss_dict.keys()}
-
+        is_logger = not self.use_distributed or comm.get_world_rank() == 0
+        errors = {f'{log_prefix}_{loss_name}': 0 for loss_name in loss_dict.keys()}
         n_samples = 0
+
         with torch.no_grad():
             for it, sample in enumerate(data_loader):
                 x, y = sample['x'], sample['y']
-
                 n_samples += x.size(0)
-                
                 x, y = self.patcher.patch(x, y)
                 y = y.to(self.device)
                 x = x.to(self.device)
-                
                 out = model(x)
-        
                 out, y = self.patcher.unpatch(out, y, evaluation=True)
-
                 if output_encoder is not None:
                     out = output_encoder.decode(out)
-
-                if (it == 0) and self.log_output and self.wandb_log and is_logger:
-                    if out.ndim == 2:
-                        img = out
-                    else:
-                        img = out.squeeze()[0]
+                if it == 0 and self.log_output and self.wandb_log and is_logger:
+                    img = out if out.ndim == 2 else out.squeeze()[0]
                     wandb.log({f'image_{log_prefix}': wandb.Image(img.unsqueeze(-1).cpu().numpy())}, commit=False)
-                
                 for loss_name, loss in loss_dict.items():
-                    errors[f'{log_prefix}_{loss_name}'] += loss(out, y).item()
-
-        del x, y, out
-
+                    if out.dim() > 2 and out.size(1) > 1:
+                        for i in range(out.size(1)):
+                            loss_value = loss(out[:, i], y[:, i])
+                            errors[f'{log_prefix}_{loss_name}'] += loss_value.mean().item()  # Ensure it is a scalar
+                    else:
+                        loss_value = loss(out, y)
+                        errors[f'{log_prefix}_{loss_name}'] += loss_value.mean().item()  # Ensure it is a scalar
         for key in errors.keys():
             errors[key] /= n_samples
-
         return errors
