@@ -24,7 +24,7 @@ def training(train_loader, test_loader,input_seq_len,epochs,model_path,predictio
     
     output_encoder = None # No encoder for the output
 
-    wandb.init(project='FNO 10 out', config={'hyper': 'parameter_values'})
+    wandb.init(project='FNOs on RFA', config={'hyper': 'parameter_values'})
 
     trainer = Trainer(model=model, n_epochs=epochs,
                   device=device,
