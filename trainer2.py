@@ -224,6 +224,10 @@ class Trainer:
 
         for epoch in range(self.n_epochs):
             t1 = default_timer() #Start the timer for the epoch
+            # Assuming you have a model called `model`
+            if torch.cuda.is_available():
+                model = model.cuda()  # Moves and returns all model parameters and buffers to the GPU.
+
             model.train()
             train_err = 0
             degreeVariation = 0.0 #Sum of the RMSE for each time step
