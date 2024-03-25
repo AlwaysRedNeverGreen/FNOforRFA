@@ -41,7 +41,4 @@ def training(train_loader, test_loader,input_seq_len,epochs,model_path,predictio
               scheduler, 
               regularizer=False, 
               training_loss=None,
-              eval_losses=eval_losses,prediction_length=prediction_length)
-
-    #Save the entire model (including architecture and trained parameters)
-    torch.save(model, model_path)
+              eval_losses=eval_losses,prediction_length=prediction_length,model_path=model_path)

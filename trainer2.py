@@ -2,7 +2,7 @@ import torch
 from timeit import default_timer
 import wandb
 import sys 
-
+import copy
 import neuralop.mpu.comm as comm
 
 from neuralop.training.patching import MultigridPatching2D
@@ -63,138 +63,8 @@ class Trainer:
         self.mg_patching_padding = mg_patching_padding
         self.patcher = MultigridPatching2D(model, levels=mg_patching_levels, padding_fraction=mg_patching_padding,
                                            use_distributed=use_distributed, stitching=mg_patching_stitching)
-
-    def train(self, train_loader, test_loaders, output_encoder,
-              model, optimizer, scheduler, regularizer, 
-              training_loss=None, eval_losses=None):
-
-        """Trains the given model on the given datasets"""
-        n_train = len(train_loader.dataset)
-
-        if not isinstance(test_loaders, dict):
-            test_loaders = dict(test=test_loaders)
-
-        if self.verbose:
-            print(f'Training on {n_train} samples')
-            print(f'Testing on {[len(loader.dataset) for loader in test_loaders.values()]} samples'
-                  f'         on resolutions {[name for name in test_loaders]}.')
-            sys.stdout.flush()
-
-        if training_loss is None:
-            training_loss = LpLoss(d=2)
-
-        if eval_losses is None: # By default just evaluate on the training loss
-            eval_losses = dict(l2=training_loss)
-
-        if output_encoder is not None:
-            output_encoder.to(self.device)
-        
-        if self.use_distributed:
-            is_logger = (comm.get_world_rank() == 0)
-        else:
-            is_logger = True 
-        
-        for epoch in range(self.n_epochs):
-            avg_loss = 0
-            avg_lasso_loss = 0
-            model.train()
-            t1 = default_timer()
-            train_err = 0.0
-
-            for idx, sample in enumerate(train_loader):
-                x, y = sample['x'], sample['y']
-                
-                if epoch == 0 and idx == 0 and self.verbose and is_logger:
-                    print(f'Training on raw inputs of size {x.shape=}, {y.shape=}')
-
-                x, y = self.patcher.patch(x, y)
-
-                if epoch == 0 and idx == 0 and self.verbose and is_logger:
-                    print(f'.. patched inputs of size {x.shape=}, {y.shape=}')
-
-                x = x.to(self.device)
-                y = y.to(self.device)
-
-                optimizer.zero_grad(set_to_none=True)
-                if regularizer:
-                    regularizer.reset()
-                print("PRE OUT")
-                out = model(x)
-                print(f'Epoch: {epoch}, Batch: {idx}, Output size: {out.shape}')
-                print(f'Sample Output: {out[:1, :5].detach().cpu().numpy()}')  # Print first row and first 5 elements as an example
-                
-                if epoch == 0 and idx == 0 and self.verbose and is_logger:
-                    print(f'Raw outputs of size {out.shape=}')
-
-                out, y = self.patcher.unpatch(out, y)
-                #Output encoding only works if output is stiched
-                if output_encoder is not None and self.mg_patching_stitching:
-                    out = output_encoder.decode(out)
-                    y = output_encoder.decode(y)
-                if epoch == 0 and idx == 0 and self.verbose and is_logger:
-                    print(f'.. Processed (unpatched) outputs of size {out.shape=}')
-
-                loss = training_loss(out.float(), y)
-                print(f'Loss: {loss}')
-
-                if regularizer:
-                    loss += regularizer.loss
-
-                loss.backward()
-                
-                optimizer.step()
-                train_err += loss.item()
-        
-                with torch.no_grad():
-                    avg_loss += loss.item()
-                    if regularizer:
-                        avg_lasso_loss += regularizer.loss
-
-            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                scheduler.step(train_err)
-            else:
-                scheduler.step()
-
-            epoch_train_time = default_timer() - t1
-            del x, y
-
-            train_err/= n_train
-            avg_loss /= self.n_epochs
-            
-            if epoch % self.log_test_interval == 0: 
-                
-                msg = f'[{epoch}] time={epoch_train_time:.2f}, avg_loss={avg_loss:.4f}, train_err={train_err:.4f}'
-
-                values_to_log = dict(train_err=train_err, time=epoch_train_time, avg_loss=avg_loss)
-
-                for loader_name, loader in test_loaders.items():
-                    if epoch == self.n_epochs - 1 and self.log_output:
-                        to_log_output = True
-                    else:
-                        to_log_output = False
-
-                    errors = self.evaluate(model, eval_losses, loader, output_encoder, log_prefix=loader_name)
-
-                    for loss_name, loss_value in errors.items():
-                        msg += f', {loss_name}={loss_value:.4f}'
-                        values_to_log[loss_name] = loss_value
-
-                if regularizer:
-                    avg_lasso_loss /= self.n_epochs
-                    msg += f', avg_lasso={avg_lasso_loss:.5f}'
-
-                if self.verbose and is_logger:
-                    print(msg)
-                    sys.stdout.flush()
-
-                # Wandb loging
-                if self.wandb_log and is_logger:
-                    for pg in optimizer.param_groups:
-                        lr = pg['lr']
-                        values_to_log['lr'] = lr
-                    wandb.log(values_to_log, step=epoch, commit=True)
                     
-    def training(self, train_loader, test_loaders, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1):
+    def training(self, train_loader, test_loaders, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1, model_path=None):
         
         n_train = len(train_loader.dataset)
     
@@ -222,6 +92,8 @@ class Trainer:
         else:
             is_logger = True 
 
+        lowest_loss = float('inf')
+        best_model_params = None
         for epoch in range(self.n_epochs):
             t1 = default_timer()
             if torch.cuda.is_available():
@@ -257,6 +129,10 @@ class Trainer:
             avg_rmse = total_rmse / (len(train_loader) * prediction_length)
             print(f'Epoch {epoch+1}: Average Loss of Epoch: {avg_loss:.4f}, Average RMSE of Epoch: {avg_rmse:.4f}')
             wandb.log({"avg_loss": avg_loss, "avg_rmse": avg_rmse}, step = epoch)
+            
+            if avg_loss < lowest_loss:
+                lowest_loss = avg_loss
+                best_model_params = copy.deepcopy(model.state_dict())
             
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
@@ -298,6 +174,11 @@ class Trainer:
                         lr = pg['lr']
                         values_to_log['lr'] = lr
                     wandb.log(values_to_log, step=epoch, commit=True)
+        if best_model_params is not None:
+            # Specify your model's save path
+            save_path = model_path
+            torch.save(best_model_params, save_path)
+            print(f'Model with lowest loss saved to {save_path}')
 
     def evaluate(self, model, loss_dict, data_loader, output_encoder=None, log_prefix=''):
         """Evaluate the model on a dictionary of losses."""
