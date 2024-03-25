@@ -125,14 +125,17 @@ class Trainer:
                     x = output.detach()  # Optional: use the output as input for the next step
 
             # Log average loss and RMSE for the epoch
-            avg_loss = total_loss / (len(train_loader) * prediction_length) #len(train_loader)*prediction_length gives the total number of predictions made in the epoch
-            avg_rmse = total_rmse / (len(train_loader) * prediction_length)
+            avg_loss = total_loss / (len(train_loader)) #len(train_loader)*prediction_length gives the total number of predictions made in the epoch
+            avg_rmse = total_rmse / (len(train_loader))
             print(f'Epoch {epoch+1}: Average Loss of Epoch: {avg_loss:.4f}, Average RMSE of Epoch: {avg_rmse:.4f}')
             wandb.log({"avg_loss": avg_loss, "avg_rmse": avg_rmse}, step = epoch)
             
             if avg_loss < lowest_loss:
                 lowest_loss = avg_loss
                 best_model_params = copy.deepcopy(model.state_dict())
+                save_path = model_path
+                torch.save(best_model_params, save_path)
+                print(f'Model with lowest loss saved to {save_path}')
             
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                 scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
@@ -141,11 +144,9 @@ class Trainer:
 
             epoch_train_time = default_timer() - t1 
             del x, y #Delete the x and y tensors to free up memory
-
-            avg_loss /= self.n_epochs 
             
             if epoch % self.log_test_interval == 0: 
-                msg = f'[{epoch+1}] time={epoch_train_time:.2f}, avg loss over all epochs={avg_loss:.4f}'
+                msg = f'[{epoch+1}] time={epoch_train_time:.2f}'
                 values_to_log = dict(train_err=total_loss, time=epoch_train_time, avg_loss=avg_loss)
 
                 for loader_name, loader in test_loaders.items():
@@ -174,11 +175,6 @@ class Trainer:
                         lr = pg['lr']
                         values_to_log['lr'] = lr
                     wandb.log(values_to_log, step=epoch, commit=True)
-        if best_model_params is not None:
-            # Specify your model's save path
-            save_path = model_path
-            torch.save(best_model_params, save_path)
-            print(f'Model with lowest loss saved to {save_path}')
 
     def evaluate(self, model, loss_dict, data_loader, output_encoder=None, log_prefix=''):
         """Evaluate the model on a dictionary of losses."""
