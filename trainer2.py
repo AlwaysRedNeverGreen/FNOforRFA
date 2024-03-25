@@ -223,47 +223,43 @@ class Trainer:
             is_logger = True 
 
         for epoch in range(self.n_epochs):
-            t1 = default_timer() #Start the timer for the epoch
-            # Assuming you have a model called `model`
+            t1 = default_timer()
             if torch.cuda.is_available():
-                model = model.cuda()  # Moves and returns all model parameters and buffers to the GPU.
-
-            model.train()
-            train_err = 0
-            degreeVariation = 0.0 #Sum of the RMSE for each time step
+                model = model.cuda() 
+            model.train()  # Set model to training mode
+            total_loss = 0
+            total_rmse = 0
+            
             for batch in train_loader:
-                optimizer.zero_grad()
+                optimizer.zero_grad()  # Clear existing gradients
                 x, y = batch['x'].to(self.device), batch['y'].to(self.device)
-                #print("This is ground truth Y:\n ", y)
-                loss = 0 
-                squarederror = 0
-
+                
                 for t in range(prediction_length):
                     output = model(x)
-                    #print("This is the output: \n ", output)
-
-                    loss += training_loss(output, y[:, t]) 
-                    squarederror = (output - y[:, t]) ** 2 
+                    loss = training_loss(output, y[:, t])
                     
-                    mse = torch.mean(squarederror) #mean squared error
-                    rmse = torch.sqrt(mse) #Calculate the RMSE for the time step, this is the squarederror in original units degrees celsius
-                    #sum the squarederror for each time step
-                    degreeVariation += rmse.item() #Add the RMSE to the total RMSE for the epoch
-                
-                    #print("This is what the output is being compared to: \n ", y[:, t])
-                    # Prepare x for the next prediction step
-                    x = output
-                loss.backward()
-                optimizer.step()
-                train_err += loss.item()
-                
-            avg_loss = train_err / len(train_loader) #average loss for the epoch
-            avg_rmse = degreeVariation / len(train_loader) #average RMSE for the epoch
-            print(f'Epoch [{epoch+1}/{self.n_epochs}]: Average Loss: {avg_loss}, Average RMSE: {avg_rmse}')
+                    #Perform backpropagation after each prediction
+                    loss.backward()  # Compute gradient of loss w.r.t model parameters
+                    optimizer.step()  # Update model parameters
+                    optimizer.zero_grad()  # Clear gradients for the next update
+                    
+                    # Calculate RMSE for logging/monitoring (Gives errors in original units of the data)
+                    rmse = torch.sqrt(torch.mean((output - y[:, t]) ** 2))
+                    
+                    total_loss += loss.item() # Accumulate loss
+                    total_rmse += rmse.item() # Accumulate RMSE
+                    
+                    # Prepare x for the next prediction step if needed
+                    x = output.detach()  # Optional: use the output as input for the next step
+
+            # Log average loss and RMSE for the epoch
+            avg_loss = total_loss / (len(train_loader) * prediction_length) #len(train_loader)*prediction_length gives the total number of predictions made in the epoch
+            avg_rmse = total_rmse / (len(train_loader) * prediction_length)
+            print(f'Epoch {epoch+1}: Average Loss of Epoch: {avg_loss:.4f}, Average RMSE of Epoch: {avg_rmse:.4f}')
             wandb.log({"avg_loss": avg_loss, "avg_rmse": avg_rmse}, step = epoch)
             
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                scheduler.step(train_err) #Reduce the learning rate if the loss is not decreasing
+                scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
             else:
                 scheduler.step()
 
@@ -273,8 +269,8 @@ class Trainer:
             avg_loss /= self.n_epochs 
             
             if epoch % self.log_test_interval == 0: 
-                msg = f'[{epoch}] time={epoch_train_time:.2f}, avg_loss={avg_loss:.4f}'
-                values_to_log = dict(train_err=train_err, time=epoch_train_time, avg_loss=avg_loss)
+                msg = f'[{epoch+1}] time={epoch_train_time:.2f}, avg loss over all epochs={avg_loss:.4f}'
+                values_to_log = dict(train_err=total_loss, time=epoch_train_time, avg_loss=avg_loss)
 
                 for loader_name, loader in test_loaders.items():
                     if epoch == self.n_epochs - 1 and self.log_output:
@@ -321,9 +317,11 @@ class Trainer:
                 out, y = self.patcher.unpatch(out, y, evaluation=True)
                 if output_encoder is not None:
                     out = output_encoder.decode(out)
+                    
                 if it == 0 and self.log_output and self.wandb_log and is_logger:
                     img = out if out.ndim == 2 else out.squeeze()[0]
                     wandb.log({f'image_{log_prefix}': wandb.Image(img.unsqueeze(-1).cpu().numpy())}, commit=False)
+                    
                 for loss_name, loss in loss_dict.items():
                     if out.dim() > 2 and out.size(1) > 1:
                         for i in range(out.size(1)):
@@ -332,6 +330,7 @@ class Trainer:
                     else:
                         loss_value = loss(out, y)
                         errors[f'{log_prefix}_{loss_name}'] += loss_value.mean().item()  # Ensure it is a scalar
+                        
         for key in errors.keys():
             errors[key] /= n_samples
         return errors
