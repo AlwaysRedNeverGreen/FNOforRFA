@@ -182,7 +182,7 @@ class Trainer:
         is_logger = not self.use_distributed or comm.get_world_rank() == 0
         errors = {f'{log_prefix}_{loss_name}': 0 for loss_name in loss_dict.keys()}
         n_samples = 0
-
+        rmse_loss = 0
         with torch.no_grad():
             for it, sample in enumerate(data_loader):
                 x, y = sample['x'], sample['y']
@@ -207,7 +207,11 @@ class Trainer:
                     else:
                         loss_value = loss(out, y)
                         errors[f'{log_prefix}_{loss_name}'] += loss_value.mean().item()  # Ensure it is a scalar
+                
+                rmse_loss += torch.sqrt(torch.mean((out - y) ** 2)).item()
+                
                         
         for key in errors.keys():
             errors[key] /= n_samples
+        errors[f'{log_prefix}_rmse'] = rmse_loss / n_samples
         return errors
