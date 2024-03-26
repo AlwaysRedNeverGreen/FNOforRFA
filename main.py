@@ -18,13 +18,13 @@ from neuralop.models import FNO2d
 
 input_seq_len=1
 epochs = 3
-prediction_length =2
+prediction_length = 10
 
-#file_path = 'Data/Original/CASE02_DATA.mat'
-file_path = 'Data/K/k1.mat'
+file_path = 'Data/Original/CASE02_DATA.mat'
+#file_path = 'Data/K/k3.mat'
 #file_path = 'Data/SIG/sig1.mat'
 #file_path = 'Data/W/wq.mat'
-model_path = f'Models/testing.pth'
+model_path = f'Models/lowTest10.pth'
 
 data_variables = ld.loadData(file_path) #Load the data from the file
 #ld.printData(data_variables) #Print the data for verification and analysis
@@ -33,10 +33,5 @@ data_variables = ld.loadData(file_path) #Load the data from the file
 train_loader, test_loader,last_timestep = sp.create_datasets(data_variables, input_seq_len=input_seq_len, prediction_len=prediction_length, train_ratio=0.20, batch_size=1) #Create the datasets
 #vd.print_test_loader_contents(train_loader) #Print the contents of the test loader for verification and analysis
 
-ct.callTraining(train_loader,test_loader,input_seq_len,epochs,model_path, prediction_length) #Train the model (this will save the model as well)
-
-model_instance = FNO2d(n_modes_width = 32, n_modes_height = 32, hidden_channels=32, projection_channels=64 , in_channels=input_seq_len, out_channels=1)
-state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-model_instance.load_state_dict(state_dict)
-loaded_model = model_instance
+loaded_model = torch.load(model_path, map_location=torch.device('cpu'))
 me.eval(test_loader,loaded_model,input_seq_len,last_timestep,prediction_len=prediction_length) #Evaluate the model"""
