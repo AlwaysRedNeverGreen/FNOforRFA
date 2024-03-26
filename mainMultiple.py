@@ -21,4 +21,4 @@ for path in dataset_paths:
     )
     dataloaders.append((train_loader, test_loader))
     
-ct.training(dataloaders,input_seq_len,epochs,model_path, prediction_length) #Train the model (this will save the model as well)
+ct.callTrainingMultiple(dataloaders,input_seq_len,epochs,model_path, prediction_length)#Train the model (this will save the model as well)
