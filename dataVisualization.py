@@ -28,29 +28,28 @@ def viewData(variables):
         plt.colorbar()
         plt.show()
         
-def animate(i, variables, min_temp, max_temp, time_steps):
-    
+def animate(i, variables, min_temp, max_temp, keys):
     plt.clf()
-    key = f'T{time_steps[i]:03d}'
+    key = keys[i]  # Use the key directly from the list of keys
     if key in variables:
         image_data = variables[key].squeeze()
-        plt.imshow(image_data, cmap='plasma', interpolation='nearest', vmin=0, vmax=max_temp)
-        if key[-1] == '5':
-            plt.title(f"Temperature Distribution at {key}")
+        plt.imshow(image_data, cmap='plasma', interpolation='nearest', vmin=min_temp, vmax=max_temp)
+        if 'Predicted' or 'Prediction' in key:  # Check if the key indicates a predicted timestep
+            plt.title(f"Predicted Temperature Distribution at {key}")
         else:
-            plt.title(f" Predicted Temperature Distribution at {key}")
+            plt.title(f"Temperature Distribution at {key}")
         plt.colorbar()
 
-def createAnimation(variables, case):
+def createAnimation(variables, case, model):
     for key in list(variables.keys()):  # Use list to avoid RuntimeError for changing dict size during iteration
         if isinstance(variables[key], torch.Tensor):
-            #print("Converting tensors to numpy arrays for key:", key)
             variables[key] = variables[key].cpu().detach().numpy()
+            
     min_temp, max_temp = 0,100
-    time_steps = sorted([int(k[1:]) for k in variables.keys() if k.startswith('T')])
+    keys = [k for k in variables.keys()]  # Directly use keys from the dictionary
     fig = plt.figure()
-    anim = FuncAnimation(fig, animate, frames=len(time_steps), fargs=(variables, min_temp, max_temp, time_steps), interval=200)
-    anim.save(f'{case}_heatmap_animation.mp4', writer='ffmpeg')
+    anim = FuncAnimation(fig, animate, frames=len(keys), fargs=(variables, min_temp, max_temp, keys), interval=200)
+    anim.save(f'{case}_heatmap_animation_{model}.mp4', writer='ffmpeg')
     plt.show()
 
 def plot_heatmap(matrix, timestep, title="Heatmap", vmin=0, vmax=100):
