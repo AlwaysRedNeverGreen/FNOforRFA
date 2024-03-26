@@ -10,7 +10,7 @@ import torch
 import dataVisualization as dv
 import matplotlib.pyplot as plt
             
-def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction_len=1, interval=5):
+def eval(test_loader, loaded_model, input_seq_len, last_timestep_str,model_name,data_name, prediction_len=1, interval=5):
     last_timestep = int(last_timestep_str[1:])  # Skip the first character 'T' and convert the rest to an integer
     current_timestep = last_timestep + 5
     predictions = [] # List to store the model's predictions
@@ -74,9 +74,8 @@ def eval(test_loader, loaded_model, input_seq_len, last_timestep_str, prediction
                     print(f"Mean Squared Error for timestep {current_timestep}: {rmse.item()}")
     
     print(f"Mean of the error list: {sum(error_list) / len(error_list)}")
-    #print(results_dict)
-    #dv.createAnimation(results_dict, 'case03')  # Create an animation of the predictions over time
+    dv.createAnimation(results_dict, f'{data_name}',model_name)  # Create an animation of the predictions over time
     
-    for i in range(len(predictions)):
+    """for i in range(len(predictions)):
         #print(f"Plotting comparison heatmap for timestep {timesteps[i]}")
-        dv.plot_comparison_heatmaps(ground_truths[i], predictions[i], timesteps[i])  # Visualize the comparison between the predicted and true temperature distributions
+        dv.plot_comparison_heatmaps(ground_truths[i], predictions[i], timesteps[i])  # Visualize the comparison between the predicted and true temperature distributions"""
