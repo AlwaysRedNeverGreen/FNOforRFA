@@ -248,6 +248,12 @@ class Trainer:
                             
                             x = output.detach()  #use the output as input for the next step      
                     
+                    if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                        scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
+                    else:
+                        scheduler.step()
+                        
+                    
                     avg_dataset_loss = total_loss / ntrain_total
                     avg_loss += avg_dataset_loss
                     #print(f'avg_dataset_loss: {avg_dataset_loss:.4f} added to avg_loss: {avg_loss:.4f}')
@@ -274,9 +280,8 @@ class Trainer:
                                 total_test_rmse += errors['test_rmse'] 
                         print()  # Move to a new line after printing all losses
                         print()        
-                         
-                    dataset_id += 1 #Increment the dataset id
-                x    
+                        
+                    dataset_id += 1 #Increment the dataset id 
                 # Log average loss and RMSE for the epoch
                 #print(f'Epoch {epoch}: T Loss of Epoch: {total_loss:.4f}, T RMSE of Epoch: {total_rmse:.4f}')
                 avg_loss = avg_loss / dataset_id
@@ -304,10 +309,7 @@ class Trainer:
                     lr = pg['lr']
                     wandb.log({"lr": lr}, step = epoch)
                 print("-" * 100)  # Separator    
-                if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                    scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
-                else:
-                    scheduler.step()
+                
 
                 epoch_train_time = default_timer() - t1
                 wandb.log({"epoch_train_time": epoch_train_time}, step = epoch)
