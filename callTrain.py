@@ -3,14 +3,16 @@ from trainer import Trainer
 from neuralop import LpLoss, H1Loss
 import torch
 import wandb
-
+import math
+ 
 def callTraining(dataloaders,input_seq_len,epochs,model_path,prediction_length):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     #test_loaders = {"default": test_loader}
     model = FNO2d(n_modes_width = 32, n_modes_height = 32, hidden_channels=32, projection_channels=101 , in_channels=input_seq_len, out_channels=1) #Create the model
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5) #Create the optimizer
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50) #Create the scheduler
+    optimizer = torch.optim.Adam(model.parameters(), lr=2e-5, weight_decay=1e-5) #Create the optimizer
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100) #Create the scheduler
+    scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.01, total_iters=800)
 
     l2loss = LpLoss(d=2, p=2) # L2 loss for the heat equation
     h1loss = H1Loss(d=2) # H1 loss for the heat equation
@@ -30,7 +32,7 @@ def callTraining(dataloaders,input_seq_len,epochs,model_path,prediction_length):
                   use_distributed=False,
                   verbose=True)
     
-    trainer.trainingMultiple(dataloaders,
+    trainer.training(dataloaders,
             output_encoder,
             model, 
             optimizer,
