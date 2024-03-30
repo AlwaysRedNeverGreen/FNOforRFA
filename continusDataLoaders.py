@@ -33,7 +33,6 @@ def create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch
     tensors = [torch.tensor(variables[key].copy(), dtype=torch.float32) for key in sorted_keys]
     input_sequences = []
     output_sequences = []
-    last_timesteps = []
     prediction_counter = 0
 
     for i in range(len(tensors)):
@@ -47,7 +46,6 @@ def create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch
             #print("output_seq",output_seq)
             prediction_counter = 0
         prediction_counter += 1
-        last_timesteps.append(sorted_keys[i + input_seq_len - 1])  # Store the last timestep of the input sequence
 
     total_pairs = int(len(input_sequences)/input_seq_len)
     print("Total input-output pairs:", total_pairs)
@@ -70,6 +68,43 @@ def create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     timestep = lastTimeStep(train_loader, input_seq_len, sorted_keys) # Get the last timestep of the training set, used for visualization in modelEval.py
     return train_loader, test_loader, combined_loader,timestep
+
+def create_single_dataset(variables, batch_size):
+    sorted_keys = sorted(variables.keys())  # Ensure keys are sorted for sequential processing
+    tensors = [torch.tensor(variables[key].copy(), dtype=torch.float32) for key in sorted_keys]
+    input_sequences = []
+    output_sequences = []
+    prediction_counter = 0
+
+    for i in range(len(tensors)):
+        if i == 0 or prediction_counter == 120 :
+            input_seq = tensors[i:i + 1]
+            input_sequences.append(torch.stack(input_seq))
+            #print("input_seq",input_seq)
+            
+            output_seq = tensors[i + 1:i + 1 + 120]
+            output_sequences.append(torch.stack(output_seq))
+            #print("output_seq",output_seq)
+            prediction_counter = 0
+        prediction_counter += 1
+
+    #total_pairs = int(len(input_sequences)/input_seq_len)
+    #print("Total input-output pairs:", total_pairs)
+    #ntrain = int(total_pairs * train_ratio)
+    #print("Number of training pairs:", ntrain)
+    #ntest = (total_pairs - ntrain)
+    #print("Number of testing pairs:", ntest)
+    
+    x_train = torch.stack(input_sequences)
+    y_train = torch.stack(output_sequences)
+    
+    train_dataset = CustomDataset(x_train, y_train)
+ 
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+ 
+    timestep = lastTimeStep(train_loader, 1, sorted_keys) # Get the last timestep of the training set, used for visualization in modelEval.py   
+    return train_loader
+
 
 def lastTimeStep(dataLoader, input_seq_len, sorted_keys):
     total_size = 0
