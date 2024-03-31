@@ -177,7 +177,7 @@ class Trainer:
                         test_loaders_dict = dict(test=test_loaders) 
                 
                     for loader_name, loader in test_loaders_dict.items():
-                        errors = self.evaluate(model, eval_losses, loader, output_encoder, log_prefix=loader_name)
+                        errors = self.evaluate(model,k,w,sig, eval_losses, loader, output_encoder, log_prefix=loader_name)
                         print(f'[Dataset {dataset_id} Eval]', end=' ')
                         
                         for loss_name, loss_value in errors.items():
@@ -225,14 +225,13 @@ class Trainer:
                 wandb.log({"epoch_train_time": epoch_train_time}, step = epoch)
                 del x, y #Delete the x and y tensors to free up memory
                         
-    def evaluate(self, model, loss_dict, data_loader, output_encoder=None, log_prefix=''):
+    def evaluate(self, model,k,w,sig, loss_dict, data_loader, output_encoder=None, log_prefix=''):
         """Evaluate the model on a dictionary of losses."""
         model.eval()
         is_logger = not self.use_distributed or comm.get_world_rank() == 0
         errors = {f'{log_prefix}_{loss_name}': 0 for loss_name in loss_dict.keys()}
         n_samples = 0
         rmse_loss = 0
-        k, w, sig = 1, 3, 5
         params_tensor = torch.tensor([k, w, sig]).view(1, 3, 1, 1).expand(-1, -1, 101, 101)
         params_tensor = params_tensor.to(self.device)
         with torch.no_grad():
