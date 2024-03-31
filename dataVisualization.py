@@ -35,9 +35,9 @@ def animate(i, variables, min_temp, max_temp, keys):
         image_data = variables[key].squeeze()
         plt.imshow(image_data, cmap='plasma', interpolation='nearest', vmin=min_temp, vmax=max_temp)
         if 'Predicted' or 'Prediction' in key:  # Check if the key indicates a predicted timestep
-            plt.title(f"Predicted Temperature Distribution at {key}")
+            plt.title(f'{key}')
         else:
-            plt.title(f"Temperature Distribution at {key}")
+            plt.title(f'{key}')
         plt.colorbar()
 
 def createAnimation(variables, case, model):
