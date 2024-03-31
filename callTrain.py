@@ -8,7 +8,7 @@ import math
 def callTraining(dataloaders,input_seq_len,epochs,model_path,prediction_length):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     #test_loaders = {"default": test_loader}
-    model = FNO2d(n_modes_width = 32, n_modes_height = 32, hidden_channels=32, projection_channels=101 , in_channels=input_seq_len, out_channels=1) #Create the model
+    model = FNO2d(n_modes_width = 32, n_modes_height = 32, hidden_channels=32, projection_channels=101 , in_channels=4, out_channels=1) #Create the model
 
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-5, weight_decay=1e-5) #Create the optimizer
     #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100) #Create the scheduler
