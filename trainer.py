@@ -93,6 +93,24 @@ class Trainer:
             lowest_loss = float('inf') 
             best_model_params = None
             lowest_test_rmse = float('inf')
+            
+            params_map = {
+                0: (1, 3, 3),
+                1: (2, 3, 3),
+                2: (4, 3, 3),
+                3: (5, 3, 3),
+                4: (3, 1, 3),
+                5: (3, 2, 3),
+                6: (3, 4, 3),
+                7: (3, 5, 3),
+                8: (3, 3, 1),
+                9: (3, 3, 2),
+                10: (3, 3, 4),
+                11: (3, 3, 5),
+                # Add more mappings as needed
+            }
+            
+            #print("This is params tensor", params_tensor)
             for epoch in range(self.n_epochs):
                 t1 = default_timer()
                 
@@ -107,19 +125,26 @@ class Trainer:
                 total_test_h1loss = 0
                 total_test_l2loss = 0
                 total_test_rmse = 0
-                
+                tracker = 0
                 for train_loaders, test_loaders in dataloaders:
+                    k, w, sig = params_map[tracker]
+                    print(f'k{k}, w{w}, sig{sig}')
+                    tracker += 1  
+                    params_tensor = torch.tensor([k, w, sig]).view(1, 3, 1, 1).expand(-1, -1, 101, 101)
+                    params_tensor = params_tensor.to(self.device)
                     model.train()  # Set model to training mode
-
                     avg_dataset_loss = 0 #To keep track of the average loss on the dataset
                     avg_dataset_rmse = 0 #To keep track of the average RMSE on the dataset
-
+                    
                     for batch in train_loaders:
                         optimizer.zero_grad()  # Clear existing gradients
                         x, y = batch['x'].to(self.device), batch['y'].to(self.device)
                         
                         for t in range(prediction_length):
-                            output = model(x)
+                            x_with_params = torch.cat((x, params_tensor), dim=1)
+                            #print("x with params",x_with_params)
+                            
+                            output = model(x_with_params)
                             loss = training_loss(output, y[:, t])
                             
                             #Perform backpropagation after each prediction
@@ -132,9 +157,7 @@ class Trainer:
                             
                             total_loss += loss.item() # Accumulate loss
                             total_rmse += rmse.item() # Accumulate RMSE
-                            
-                            x = output.detach()  #use the output as input for the next step      
-                    
+                            x = output.detach()  #use the output as input for the next step     
                     if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                         scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
                     else:
@@ -209,6 +232,9 @@ class Trainer:
         errors = {f'{log_prefix}_{loss_name}': 0 for loss_name in loss_dict.keys()}
         n_samples = 0
         rmse_loss = 0
+        k, w, sig = 1, 3, 5
+        params_tensor = torch.tensor([k, w, sig]).view(1, 3, 1, 1).expand(-1, -1, 101, 101)
+        params_tensor = params_tensor.to(self.device)
         with torch.no_grad():
             for it, sample in enumerate(data_loader):
                 x, y = sample['x'], sample['y']
@@ -216,17 +242,15 @@ class Trainer:
                 x, y = self.patcher.patch(x, y)
                 y = y.to(self.device)
                 current_input = x.to(self.device)  # Initialize current_input with the initial input
+
                 for t in range(y.size(1)):  # Assume y has shape [batch, timesteps, ...] and iterate over timesteps
-                    #print("this is current input",current_input)
-                    out = model(current_input)
+                    current_with_params = torch.cat((current_input, params_tensor), dim=1)
+                    out = model(current_with_params)
                     current_input = out.detach()  # Use the output as the input for the next timestep
                     
                     # Now calculate the loss for this step
                     for loss_name, loss in loss_dict.items():
                         if y.size(1) > t:  # Make sure y has this timestep
-                            #print("loss name",loss_name)
-                            #print("this is out",out)
-                            #print("tjos os y",y[:, t])
                             loss_value = loss(out, y[:, t])
                             errors[f'{log_prefix}_{loss_name}'] += loss_value.mean().item()
                         else:
