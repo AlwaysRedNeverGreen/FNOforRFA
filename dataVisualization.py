@@ -74,3 +74,45 @@ def plot_comparison_heatmaps(y_true, y_pred, timestep, title_true="Ground Truth"
 
     plt.tight_layout()
     plt.show()
+    
+def animateComparison(i, ground_truth, predictions, other, min_temp, max_temp):
+    plt.clf()
+    
+    gt_key = list(ground_truth.keys())[i]
+    pred_key = list(predictions.keys())[i]
+    other_key = list(other.keys())[i]
+
+    # Create subplots for each type of data
+    ax1 = plt.subplot(1, 3, 1)
+    ax2 = plt.subplot(1, 3, 2)
+    ax3 = plt.subplot(1, 3, 3)
+
+    # Ground Truth
+    gt_data = ground_truth[gt_key].squeeze()
+    im1 = ax1.imshow(gt_data, cmap='plasma', interpolation='nearest', vmin=min_temp, vmax=max_temp)
+    ax1.set_title(gt_key)
+    plt.colorbar(im1, ax=ax1)
+
+    # Predictions
+    pred_data = predictions[pred_key].squeeze()
+    im2 = ax2.imshow(pred_data, cmap='plasma', interpolation='nearest', vmin=min_temp, vmax=max_temp)
+    ax2.set_title(pred_key)
+    plt.colorbar(im2, ax=ax2)
+
+    # Other Data
+    other_data = other[other_key].squeeze()
+    im3 = ax3.imshow(other_data, cmap='plasma', interpolation='nearest', vmin=min_temp, vmax=max_temp)
+    ax3.set_title(other_key)
+    plt.colorbar(im3, ax=ax3)
+
+def createAnimationComparison(ground_truth, predictions, differences, case, model):
+    frames = len(ground_truth)
+    min_temp, max_temp = 0, 100
+    fig = plt.figure(figsize=(15, 5))  # Adjust the size to your preference
+
+    anim = FuncAnimation(fig, animateComparison, frames=frames,
+                         fargs=(ground_truth, predictions, differences, min_temp, max_temp),
+                         interval=200, repeat=True)
+
+    anim.save(f'Predicted Videos/{case}_comparisonHeatMap_using_{model}.mp4', writer='ffmpeg')
+    plt.show()
