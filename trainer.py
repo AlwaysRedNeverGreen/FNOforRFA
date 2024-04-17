@@ -164,10 +164,10 @@ class Trainer:
                         scheduler.step()
                         
                     
-                    avg_dataset_loss = total_loss / ntrain_total
+                    avg_dataset_loss = total_loss / prediction_length
                     avg_loss += avg_dataset_loss
                     #print(f'avg_dataset_loss: {avg_dataset_loss:.4f} added to avg_loss: {avg_loss:.4f}')
-                    avg_dataset_rmse = total_rmse / ntrain_total
+                    avg_dataset_rmse = total_rmse / prediction_length
                     avg_rmse += avg_dataset_rmse
                     #print(f'avg_dataset_rmse: {avg_dataset_rmse:.4f} added to avg_rmse: {avg_rmse:.4f}')
                     
