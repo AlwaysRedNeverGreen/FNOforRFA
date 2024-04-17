@@ -23,7 +23,7 @@ def findMinMax(variables):
    
 def viewData(variables):
     for key, value in variables.items():
-        plt.imshow(value, cmap='hot', interpolation='nearest', vmin=0, vmax=100)
+        plt.imshow(value, cmap='plasma', interpolation='nearest', vmin=0, vmax=100)
         plt.title(f"Temperature Distribution at {key}")
         plt.colorbar()
         plt.show()
@@ -116,3 +116,15 @@ def createAnimationComparison(ground_truth, predictions, differences, case, mode
 
     anim.save(f'Predicted Videos/{case}_comparisonHeatMap_using_{model}.mp4', writer='ffmpeg')
     plt.show()
+    
+def viewData50(variables):
+    for key, value in variables.items():
+        if key in ('T050','T100','T300','T600'):
+            plt.imshow(value, cmap='plasma', interpolation='nearest', vmin=0, vmax=100)
+            plt.title(f"Temperature Distribution at {key}")
+            plt.colorbar()
+            #save the figure
+            plt.savefig(f'Images/{key}.png')
+            plt.show()
+        else:
+            continue
