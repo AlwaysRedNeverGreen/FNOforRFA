@@ -45,6 +45,7 @@ def create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch
             output_sequences.append(torch.stack(output_seq))
             #print("output_seq",output_seq)
             prediction_counter = 0
+            
         prediction_counter += 1
 
     total_pairs = int(len(input_sequences)/input_seq_len)
@@ -61,13 +62,11 @@ def create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch
     
     train_dataset = CustomDataset(x_train, y_train)
     test_dataset = CustomDataset(x_test, y_test)
-    combined_dataset = ConcatDataset([train_dataset, test_dataset])
     
-    combined_loader = DataLoader(combined_dataset, batch_size=batch_size, shuffle=True)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     timestep = lastTimeStep(train_loader, input_seq_len, sorted_keys) # Get the last timestep of the training set, used for visualization in modelEval.py
-    return train_loader, test_loader, combined_loader,timestep
+    return train_loader, test_loader,timestep
 
 def create_single_dataset(variables, batch_size):
     sorted_keys = sorted(variables.keys())  # Ensure keys are sorted for sequential processing
@@ -88,34 +87,18 @@ def create_single_dataset(variables, batch_size):
             prediction_counter = 0
         prediction_counter += 1
 
-    #total_pairs = int(len(input_sequences)/input_seq_len)
-    #print("Total input-output pairs:", total_pairs)
-    #ntrain = int(total_pairs * train_ratio)
-    #print("Number of training pairs:", ntrain)
-    #ntest = (total_pairs - ntrain)
-    #print("Number of testing pairs:", ntest)
-    
     x_train = torch.stack(input_sequences)
     y_train = torch.stack(output_sequences)
     
     train_dataset = CustomDataset(x_train, y_train)
- 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
- 
-    timestep = lastTimeStep(train_loader, 1, sorted_keys) # Get the last timestep of the training set, used for visualization in modelEval.py   
     return train_loader
 
 
 def lastTimeStep(dataLoader, input_seq_len, sorted_keys):
     total_size = 0
     for batch_idx, batch in enumerate(dataLoader):
-            x, y = batch['x'], batch['y']
-            
+            x, y = batch['x'], batch['y']            
             total_size = x.size(1) + y.size(1)+total_size
-            
-            #print(f"Batch {batch_idx}:")
-            #print("Input Tensor:")
-            #print(x)  # Print only up to 'limit' elements if specified
-            #print("Output Tensor:")
     return (total_size*5)
 
