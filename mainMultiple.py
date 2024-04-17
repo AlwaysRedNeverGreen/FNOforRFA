@@ -15,7 +15,7 @@ dataloaders = []
 for path in dataset_paths:
     data_variables = ld.loadData(path)  # Load the data from the file
     print(f'Loaded data from {path}')
-    train_loader, test_loader, combined_loader,timestep = cdl.create_datasets(
+    train_loader, test_loader, timestep = cdl.create_datasets(
         data_variables,
         input_seq_len=input_seq_len,
         prediction_len=prediction_length,
