@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def append_results_to_csv(model_name, results, csv_file_path):
+def append_results_to_csv(model_name, results, csv_file_path,k,w,sig):
     """
     Append evaluation results of a model to a CSV file.
     
@@ -17,10 +17,10 @@ def append_results_to_csv(model_name, results, csv_file_path):
         writer = csv.writer(file)
         # Write headers if the file is new
         if not file_exists:
-            writer.writerow(['Model Name', 'Timestep', 'RMSE'])
+            writer.writerow(['Model Name', 'Timestep', 'RMSE','K,','W','Sig'])
         # Append the data rows
         for timestep, rmse in results.items():
-            writer.writerow([model_name, timestep, rmse])
+            writer.writerow([model_name, timestep, rmse,k,w,sig])
             
 
 def plotGraphs(file_path):
@@ -34,7 +34,7 @@ def plotGraphs(file_path):
     plt.figure(figsize=(10, 6))
     for model_name in df['Model Name'].unique():
         model_data = df[df['Model Name'] == model_name]
-        plt.plot(model_data['Timestep'], model_data['RMSE'], label=model_name, marker='o') # Added a marker for clarity
+        plt.plot(model_data['Timestep'], model_data['RMSE'], label=model_name, marker='') # Added a marker for clarity
 
     # Set the positions and labels for the x-axis ticks to show every 50 units
     step_size = 5  # The step size of your timesteps, assuming it's consistent
@@ -46,10 +46,10 @@ def plotGraphs(file_path):
     plt.xticks(labels_to_show, labels_to_show) # The ticks and labels are now based on the unique timesteps
     plt.xlabel('Timestep')
     plt.ylabel('RMSE')
-    plt.title('RMSE Over Time for Different Models')
+    plt.title('RMSE Over Predictions for Sigma 3')
     plt.xticks(rotation=45) # Improve readability of the timestep labels
     plt.legend()
     plt.tight_layout() # Adjust layout to make room for the rotated x-axis labels
     plt.show()
 
-#plotGraphs('eval_results_sig5.csv')
+plotGraphs('csvs/new_results_compk3.csv')

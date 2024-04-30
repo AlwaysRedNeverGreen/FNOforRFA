@@ -1,10 +1,11 @@
+"""This script is a modified script of the original from https://github.com/neuraloperator/neuraloperator
+Here, a recursive training loop is implemented that uses the predicted output as its input to train the model
+A custom evaluation function is also implemented to evaluate the model using the recursive strategy"""
 import torch
-from timeit import default_timer
 import wandb
 import sys 
-import copy
 import neuralop.mpu.comm as comm
-
+import time
 from neuralop.training.patching import MultigridPatching2D
 from neuralop.training.losses import LpLoss
 
@@ -62,7 +63,7 @@ class Trainer:
         self.mg_patching_padding = mg_patching_padding
         self.patcher = MultigridPatching2D(model, levels=mg_patching_levels, padding_fraction=mg_patching_padding,
                                            use_distributed=use_distributed, stitching=mg_patching_stitching)                  
-    def training(self, dataloaders, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1, model_path=None):
+    def training(self, dataloaders, resolution, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1, model_path=None):
             ntrain_total = 0
             ntest_total = 0
             for train_loaders,test_loaders in dataloaders:
@@ -91,46 +92,44 @@ class Trainer:
                 is_logger = True 
 
             lowest_loss = float('inf') 
-            best_model_params = None
             lowest_test_rmse = float('inf')
             
             params_map = {
-                0: (1, 3, 3),
-                1: (2, 3, 3),
-                2: (4, 3, 3),
-                3: (5, 3, 3),
-                4: (3, 1, 3),
-                5: (3, 2, 3),
-                6: (3, 4, 3),
-                7: (3, 5, 3),
-                8: (3, 3, 1),
-                9: (3, 3, 2),
-                10: (3, 3, 4),
-                11: (3, 3, 5),
+                0: (1, 2, 2),
+                1: (2, 2, 2),
+                2: (4, 2, 2),
+                3: (5, 2, 2),
+                4: (2, 1, 2),
+                5: (2, 2, 2),
+                6: (2, 4, 2),
+                7: (2, 5, 2),
+                8: (2, 2, 1),
+                9: (2, 2, 2),
+                10: (2, 2, 4),
+                11: (2, 2, 5),
                 # Add more mappings as needed
             }
-            
-            #print("This is params tensor", params_tensor)
+
             for epoch in range(self.n_epochs):
-                t1 = default_timer()
+                epoch_start_time = time.time()
                 
                 if torch.cuda.is_available():
                     model = model.cuda() 
                     
-                total_loss = 0
-                total_rmse = 0
-                dataset_id=0 #To keep track of which dataset is being trained on
+                dataset_id=1 #To keep track of which dataset is being trained on
                 avg_loss = 0
                 avg_rmse = 0
-                total_test_h1loss = 0
                 total_test_l2loss = 0
                 total_test_rmse = 0
                 tracker = 0
+                
                 for train_loaders, test_loaders in dataloaders:
-                    k, w, sig = params_map[tracker]
+                    total_loss = 0
+                    total_rmse = 0
+                    k, w, sig = params_map[tracker] #Get the parameters for the dataset
                     print(f'k{k}, w{w}, sig{sig}')
-                    tracker += 1  
-                    params_tensor = torch.tensor([k, w, sig]).view(1, 3, 1, 1).expand(-1, -1, 101, 101)
+                    tracker += 1
+                    params_tensor = torch.tensor([k, w, sig]).view(1, 3, 1, 1).expand(-1, -1, 101, 101) #Create a tensor of the parameters
                     params_tensor = params_tensor.to(self.device)
                     model.train()  # Set model to training mode
                     avg_dataset_loss = 0 #To keep track of the average loss on the dataset
@@ -139,13 +138,11 @@ class Trainer:
                     for batch in train_loaders:
                         optimizer.zero_grad()  # Clear existing gradients
                         x, y = batch['x'].to(self.device), batch['y'].to(self.device)
-                        
-                        for t in range(prediction_length):
-                            x_with_params = torch.cat((x, params_tensor), dim=1)
-                            #print("x with params",x_with_params)
+                        for t in range(y.size(1)):
+                            x_with_params = torch.cat((x, params_tensor), dim=1) # Concatenate the input with the parameters
                             
-                            output = model(x_with_params)
-                            loss = training_loss(output, y[:, t])
+                            output = model(x_with_params) # Forward pass
+                            loss = training_loss(output, y[:, t]) # Compute the L2loss
                             
                             #Perform backpropagation after each prediction
                             loss.backward()  # Compute gradient of loss w.r.t model parameters
@@ -158,18 +155,14 @@ class Trainer:
                             total_loss += loss.item() # Accumulate loss
                             total_rmse += rmse.item() # Accumulate RMSE
                             x = output.detach()  #use the output as input for the next step     
-                    if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                        scheduler.step(total_loss) #Reduce the learning rate if the loss is not decreasing
-                    else:
-                        scheduler.step()
+                    
+                    scheduler.step() # Step the scheduler after each dataset
                         
                     
-                    avg_dataset_loss = total_loss / prediction_length
+                    avg_dataset_loss = total_loss / y.size(1) #Calculate the average loss per prediction
                     avg_loss += avg_dataset_loss
-                    #print(f'avg_dataset_loss: {avg_dataset_loss:.4f} added to avg_loss: {avg_loss:.4f}')
-                    avg_dataset_rmse = total_rmse / prediction_length
+                    avg_dataset_rmse = total_rmse / y.size(1)
                     avg_rmse += avg_dataset_rmse
-                    #print(f'avg_dataset_rmse: {avg_dataset_rmse:.4f} added to avg_rmse: {avg_rmse:.4f}')
                     
                     print(f'[Dataset {dataset_id}] Average dataset training Loss: {avg_dataset_loss:.4f}, Average dataset training RMSE: {avg_dataset_rmse:.4f}')
                     
@@ -182,8 +175,6 @@ class Trainer:
                         
                         for loss_name, loss_value in errors.items():
                             print(f'{loss_name}={loss_value:.4f}', end=' ')  # Print each loss on the same line
-                            if loss_name == 'test_h1':
-                                total_test_h1loss += errors['test_h1']
                             if loss_name == 'test_l2':
                                 total_test_l2loss += errors['test_l2']
                             if loss_name == 'test_rmse':
@@ -193,35 +184,34 @@ class Trainer:
                         
                     dataset_id += 1 #Increment the dataset id 
                 # Log average loss and RMSE for the epoch
-                #print(f'Epoch {epoch}: T Loss of Epoch: {total_loss:.4f}, T RMSE of Epoch: {total_rmse:.4f}')
-                avg_loss = avg_loss / dataset_id
-                avg_rmse = avg_rmse / dataset_id
-                  # Separator
+                avg_loss = avg_loss / ntrain_total #Calculate the average loss for the epoch
+                avg_rmse = avg_rmse / ntrain_total #Calculate the average RMSE for the epoch
                 print(f'Epoch {epoch}: Average Loss of Epoch: {avg_loss:.4f}, Average RMSE of Epoch: {avg_rmse:.4f}')
                 
-                avg_test_h1loss = total_test_h1loss / dataset_id
-                avg_test_l2loss = total_test_l2loss / dataset_id
-                avg_test_rmse = total_test_rmse / dataset_id
-                print(f'Avg test H1 Loss: {avg_test_h1loss:.4f}, Avg test LP Loss: {avg_test_l2loss:.4f}, Avg test RMSE: {avg_test_rmse:.4f}\n')
-                wandb.log({"avg_epoch_loss": avg_loss, "avg_epoch_rmse": avg_rmse, "avg_test_h1loss": avg_test_h1loss, "avg_test_l2loss": avg_test_l2loss, "avg_test_rmse": avg_test_rmse}, step = epoch)
+                
+                avg_test_l2loss = total_test_l2loss / ntrain_total #Calculate the average test L2 loss for the epoch
+                avg_test_rmse = total_test_rmse / ntrain_total #Calculate the average test RMSE for the epoch
+                print(f'Avg test L2 Loss: {avg_test_l2loss:.4f}, Avg test RMSE: {avg_test_rmse:.4f}\n')
+                wandb.log({"avg_epoch_loss": avg_loss, "avg_epoch_rmse": avg_rmse, "avg_test_l2loss": avg_test_l2loss, "avg_test_rmse": avg_test_rmse}, step = epoch)
                      
                 if avg_loss < lowest_loss:
                     lowest_loss = avg_loss
-                    torch.save(model, model_path)
-                    print(f'Model with lowest training loss saved to {model_path}')
+                    torch.save(model, f'Models/no3new2params{resolution}res lowTrain{prediction_length}.pth')
+                    print(f'{resolution} res Model with lowest training loss saved')
 
                 if avg_test_rmse < lowest_test_rmse:
                     lowest_test_rmse = avg_test_rmse
-                    save_path = f'Models/lowTest{prediction_length}.pth'
+                    save_path = f'Models/no3new2params{resolution}res lowTest{prediction_length}.pth'
                     torch.save(model, save_path)
                     print(f'Model with lowest test_rmse loss saved to {save_path}\n')
+
                 for pg in optimizer.param_groups:
                     lr = pg['lr']
                     wandb.log({"lr": lr}, step = epoch)
                 print("-" * 100)  # Separator    
                 
 
-                epoch_train_time = default_timer() - t1
+                epoch_train_time = time.time()-epoch_start_time
                 wandb.log({"epoch_train_time": epoch_train_time}, step = epoch)
                 del x, y #Delete the x and y tensors to free up memory
                         
@@ -260,6 +250,5 @@ class Trainer:
                 # After processing all timesteps, divide the accumulated losses by the number of timesteps to get the average
                 for loss_name in errors.keys():
                     errors[loss_name] /= y.size(1)
-                    
-            errors[f'{log_prefix}_rmse'] = rmse_loss / (n_samples * y.size(1))
+            errors[f'{log_prefix}_rmse'] = (rmse_loss / y.size(1))
         return errors
