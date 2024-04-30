@@ -60,5 +60,5 @@ def printData(variables):
     for key, matrix in variables.items():
         print(f"Data for {key}:")
         print(matrix)
-        print("\n")  # Adds an empty line for readability
+        print("\n")  # Add an empty line for readability
 
