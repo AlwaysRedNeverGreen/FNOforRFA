@@ -1,4 +1,9 @@
-""" This script loads data from multiple files, creates train and test sets for each dataset, to train a model"""
+"""
+This script configures and initiates the training process for a machine learning model. 
+It specifies dataset paths, loads the data, splits it into training and testing sets, 
+and conducts model training over a defined number of epochs. The trained model is then saved to a specified path.
+"""
+
 import loadData as ld
 import callTrain as ct
 import continuousDataLoaders as cdl
@@ -24,5 +29,5 @@ for path in dataset_paths:
         batch_size=1
     )
     dataloaders.append((train_loader, test_loader))
-    
-ct.callTraining(dataloaders,epochs,model_path, prediction_length)#Train the model (this will save the model as well)
+vd.print_loader_contents(dataloaders) #View the data
+ct.callTraining(dataloaders,epochs,prediction_length)#Train the model

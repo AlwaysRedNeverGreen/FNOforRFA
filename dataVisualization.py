@@ -1,5 +1,6 @@
 """
-This module provides visualization tools for temperature distribution data. It includes functions to display static heatmaps of temperature data, generate animated visualizations over a series of timesteps
+This module provides visualization tools for temperature distribution data. 
+It includes functions to display static heatmaps of temperature data, generate animated visualizations over a series of timesteps
 
 Functions:
 - findMinMax(variables): Computes the minimum and maximum temperature values across all timesteps in the dataset for consistent color scaling in visualizations.
@@ -7,7 +8,8 @@ Functions:
 - animate(i, variables, min_temp, max_temp, time_steps): Helper function to generate frames for the animation, showing temperature distribution at each timestep.
 - createAnimation(variables, case): Produces an animated visualization of temperature distributions over time, saved as a video file.
 - plot_heatmap(matrix, timestep, title, vmin, vmax): Plots a single heatmap for a given temperature matrix at a specific timestep, with customizable color scaling.
-- plot_comparison_heatmaps plots heatmaps of ground truth and predicted temperature distributions for comparison at a specific timestep.
+- animateComparison Helper function to generate frames for the comparison animation, showing ground truth, predictions, and other data.
+- createAnimationComparisonProduces an animated comparison of ground truth, predicted, and other data over time, saved as a video file.
 Dependencies:
 - matplotlib: Used for creating static and animated visualizations.
 - numpy: Utilized for numerical operations, particularly finding the min and max values for temperature scaling.
@@ -57,23 +59,6 @@ def plot_heatmap(matrix, timestep, title="Heatmap", vmin=0, vmax=100):
     plt.title(f"{title} - {timestep}")
     plt.colorbar()
     plt.show()
-
-def plot_comparison_heatmaps(y_true, y_pred, timestep, title_true="Ground Truth", title_pred="Prediction", vmin=0, vmax=100):
-    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-    fig.suptitle(f"Temperature Distribution at {timestep}")
-
-    # Plot Ground Truth
-    im_true = axs[0].imshow(y_true, cmap='plasma', interpolation='nearest', vmin=vmin, vmax=vmax)
-    axs[0].set_title(title_true)
-    fig.colorbar(im_true, ax=axs[0], fraction=0.046, pad=0.04)
-
-    # Plot Prediction
-    im_pred = axs[1].imshow(y_pred, cmap='plasma', interpolation='nearest', vmin=vmin, vmax=vmax)
-    axs[1].set_title(title_pred)
-    fig.colorbar(im_pred, ax=axs[1], fraction=0.046, pad=0.04)
-
-    plt.tight_layout()
-    plt.show()
     
 def animateComparison(i, ground_truth, predictions, other, min_temp, max_temp):
     plt.clf()
@@ -116,15 +101,3 @@ def createAnimationComparison(ground_truth, predictions, differences, case,k,w,s
 
     anim.save(f'Predicted Videos/{case}_comparisonHeatMap_using_{model},k{k},w{w},sig{sig}.mp4', writer='ffmpeg')
     plt.show()
-    
-def viewData50(variables):
-    for key, value in variables.items():
-        if key in ('T050','T100','T300','T600'):
-            plt.imshow(value, cmap='plasma', interpolation='nearest', vmin=0, vmax=100)
-            plt.title(f"Temperature Distribution at {key}")
-            plt.colorbar()
-            #save the figure
-            plt.savefig(f'Images/{key}.png')
-            plt.show()
-        else:
-            continue

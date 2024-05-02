@@ -1,11 +1,14 @@
-"""Designed to evaluate the model on the full dataset."""                                                         
+"""
+This script evaluates a trained model on a full dataset, specifically designed for time-series predictions where each subsequent input depends on the previous prediction.
+It calculates the root mean square error (RMSE) for each timestep, logs errors, and visualizes results comparing predictions with ground truths. 
+Parameters specific to the model's use case are incorporated into the input, allowing for detailed assessment of model performance under various conditions. 
+Results are recorded and visualizations of predictions versus actual data are generated.
+"""
+
 import torch
-from torch import nn
 import dataVisualization as dv
 import loadData as ld
 import continuousDataLoaders as cdl
-import viewData as vd
-import Graphing as gp
 import time
 
 def evalParams(device,combined_loader, loaded_model, last_timestep,model_name,case_name,k,w,sig):
@@ -54,7 +57,6 @@ def evalParams(device,combined_loader, loaded_model, last_timestep,model_name,ca
     
     print(f"Time taken to evaluate the model: {end_time}")                            
     print(f"Mean of the error list: {sum(total_loss) / len(total_loss)}")
-    gp.append_results_to_csv(model_name, rmse_dict, f'csvs/new_results_comp{case_name}.csv',k,w,sig)
     dv.createAnimationComparison(ground_truths, predictions, differences, case_name,k,w,sig, model_name)
         
 input_seq_len=1

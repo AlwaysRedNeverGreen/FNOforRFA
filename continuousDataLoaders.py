@@ -1,19 +1,23 @@
 """
 This script creates datasets without repeating sequences, one continous flow of input and output batches
-- CustomDataset: A subclass of torch.utils.data.Dataset that stores the input and output sequences for model training and evaluation. It overrides the __len__ and __getitem__ methods to allow iteration over the dataset.
+- CustomDataset: A subclass of torch.utils.data.Dataset that stores the input and output sequences for model training and evaluation. 
+It overrides the __len__ and __getitem__ methods to allow iteration over the dataset.
 
 Functions:
-- create_datasets(variables, input_seq_len, prediction_len, train_ratio, batch_size): Processes the raw data from a dictionary of variables into structured input-output pairs, splits them into training and testing sets based on a specified ratio, and wraps them in DataLoader instances for batch processing during model training and evaluation.
-- lastTimeStep(ntrain, input_seq_len, sorted_keys): Helper function to determine the last timestep in the training set, which is used for visualization in modelEval.py.
+- create_datasets: Processes the raw data from a dictionary of variables into structured input-output pairs, 
+splits them into training and testing sets based on a specified ratio, and wraps them in DataLoader instances for  processing during model training and testing.
+
+- lastTimeStep: Helper function to determine the last timestep in the training set, which is used for visualization in modelEval.py.
 Dependencies:
 - torch: The main library used for creating tensor objects from the raw data and for defining the dataset and dataloader functionalities.
 - DataLoader, Dataset from torch.utils.data: Utilized for batching and iterating over the datasets during model training and evaluation.
 
 Usage:
-This module is intended to be used in scenarios where sequential data (e.g., time series) needs to be fed into a neural network model, facilitating the process of preparing the data for model training and evaluation.
+This module is intended to be used in scenarios where sequential data (e.g., time series) needs to be fed into a neural network model, 
+facilitating the process of preparing the data for model training and evaluation.
 """
 
-from torch.utils.data import DataLoader, Dataset, ConcatDataset
+from torch.utils.data import DataLoader, Dataset
 import torch
 
 class CustomDataset(Dataset):

@@ -1,6 +1,13 @@
-"""This script is a modified script of the original from https://github.com/neuraloperator/neuraloperator
-Here, a recursive training loop is implemented that uses the predicted output as its input to train the model
-A custom evaluation function is also implemented to evaluate the model using the recursive strategy"""
+"""
+This script, adapted from the original at https://github.com/neuraloperator/neuraloperator 
+implements a recursive training loop for a neural network model. 
+The loop uses the predicted output as input for subsequent training iterations, enhancing the model's temporal prediction capabilities. 
+Additionally, a custom evaluation function is integrated to assess model performance using this recursive training strategy. 
+This script also includes detailed logging and experiment tracking via Weights & Biases.
+Note: - The only remaining original code is the declaration of the Trainer class with its various intializing parameters.
+      - The training and evaluation functions though have very little resemblance to the original code.
+"""
+
 import torch
 import wandb
 import sys 
@@ -63,7 +70,7 @@ class Trainer:
         self.mg_patching_padding = mg_patching_padding
         self.patcher = MultigridPatching2D(model, levels=mg_patching_levels, padding_fraction=mg_patching_padding,
                                            use_distributed=use_distributed, stitching=mg_patching_stitching)                  
-    def training(self, dataloaders, resolution, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1, model_path=None):
+    def training(self, dataloaders, resolution, output_encoder,model, optimizer, scheduler, regularizer, training_loss=None, eval_losses=None, prediction_length=1):
             ntrain_total = 0
             ntest_total = 0
             for train_loaders,test_loaders in dataloaders:
@@ -196,12 +203,12 @@ class Trainer:
                      
                 if avg_loss < lowest_loss:
                     lowest_loss = avg_loss
-                    torch.save(model, f'Models/no3new2params{resolution}res lowTrain{prediction_length}.pth')
+                    torch.save(model, f'Models/model{resolution}res lowTrain{prediction_length}.pth')
                     print(f'{resolution} res Model with lowest training loss saved')
 
                 if avg_test_rmse < lowest_test_rmse:
                     lowest_test_rmse = avg_test_rmse
-                    save_path = f'Models/no3new2params{resolution}res lowTest{prediction_length}.pth'
+                    save_path = f'Models/model{resolution}res lowTest{prediction_length}.pth'
                     torch.save(model, save_path)
                     print(f'Model with lowest test_rmse loss saved to {save_path}\n')
 
