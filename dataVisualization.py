@@ -51,8 +51,8 @@ def createAnimation(variables, case, model):
     keys = [k for k in variables.keys()]  # Directly use keys from the dictionary
     fig = plt.figure()
     anim = FuncAnimation(fig, animate, frames=len(keys), fargs=(variables, min_temp, max_temp, keys), interval=200)
-    anim.save(f'{case}_heatmap_animation_{model}.mp4', writer='ffmpeg')
-    plt.show()
+    anim.save(f'Videos/March/{case}.mp4', writer='ffmpeg')
+    #plt.show()
 
 def plot_heatmap(matrix, timestep, title="Heatmap", vmin=0, vmax=100):
     plt.imshow(matrix, cmap='plasma', interpolation='nearest', vmin=vmin, vmax=vmax)
@@ -90,7 +90,7 @@ def animateComparison(i, ground_truth, predictions, other, min_temp, max_temp):
     ax3.set_title(other_key)
     plt.colorbar(im3, ax=ax3)
 
-def createAnimationComparison(ground_truth, predictions, differences, case,k,w,sig, model):
+def createAnimationComparison(ground_truth, predictions, differences, case,k,w,sig,kt,wt,sigt, model):
     frames = len(ground_truth)
     min_temp, max_temp = 0, 100
     fig = plt.figure(figsize=(15, 5))  # Adjust the size to your preference
@@ -99,5 +99,5 @@ def createAnimationComparison(ground_truth, predictions, differences, case,k,w,s
                          fargs=(ground_truth, predictions, differences, min_temp, max_temp),
                          interval=200, repeat=True)
 
-    anim.save(f'Predicted Videos/{case}_comparisonHeatMap_using_{model},k{k},w{w},sig{sig}.mp4', writer='ffmpeg')
+    anim.save(f'Predicted Videos/{case}_comparisonHeatMap_using_{model},ktissue {k} ktumour {kt},wtissue {w} wtumour {wt},sigtissue{sig} sigtumour{sigt}.mp4', writer='ffmpeg')
     plt.show()

@@ -12,9 +12,9 @@ import viewData as vd
 input_seq_len=1
 epochs = 200
 prediction_length =100
-dataset_paths = ['Data/K/k1.mat', 'Data/K/k2.mat','Data/K/k4.mat','Data/K/k5.mat',
-                 'Data/W/w1.mat', 'Data/W/w2.mat','Data/W/w4.mat','Data/W/w5.mat',
-                 'Data/SIG/sig1.mat', 'Data/SIG/sig2.mat','Data/SIG/sig4.mat','Data/SIG/sig5.mat']
+dataset_paths = ['Data/K/k1.mat']#, 'Data/K/k2.mat','Data/K/k4.mat','Data/K/k5.mat',
+                 #'Data/W/w1.mat', 'Data/W/w2.mat','Data/W/w4.mat','Data/W/w5.mat',
+                 #'Data/SIG/sig1.mat', 'Data/SIG/sig2.mat','Data/SIG/sig4.mat','Data/SIG/sig5.mat']
 model_path = f'Models/testing.pth'
 
 dataloaders = [] # A list to store the train and test loaders for each dataset
@@ -29,5 +29,5 @@ for path in dataset_paths:
         batch_size=1
     )
     dataloaders.append((train_loader, test_loader))
-vd.print_loader_contents(dataloaders) #View the data
+#vd.print_loader_contents(dataloaders) #View the data
 ct.callTraining(dataloaders,epochs,prediction_length)#Train the model

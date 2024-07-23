@@ -19,7 +19,7 @@ def callTraining(dataloaders,epochs,prediction_length):
     model = FNO2d(n_modes_width = resolution, n_modes_height = resolution, hidden_channels=64, projection_channels=101 , in_channels=4, out_channels=1) #Create the model
 
     optimizer = torch.optim.Adam(model.parameters(), lr=2e-5)
-    scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.01, total_iters=epochs*12)
+    scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1.0, end_factor=0.01, total_iters=epochs*14)
 
     l2loss = LpLoss(d=2, p=2) # L2 loss for the heat equation
 
@@ -44,4 +44,4 @@ def callTraining(dataloaders,epochs,prediction_length):
             scheduler, 
             regularizer=False, 
             training_loss=None,
-            eval_losses=eval_losses,prediction_length=prediction_length)
+            eval_losses=eval_losses,prediction_length=prediction_length,regions = True)
